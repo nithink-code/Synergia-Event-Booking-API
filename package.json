@@ -1,0 +1,18 @@
+{
+  "name": "assignment1",
+  "version": "1.0.0",
+  "description": "Synergia Event Booking API - Node.js & Express Fundamentals",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["express", "nodejs", "rest-api", "event-booking"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
