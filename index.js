@@ -1,125 +1,218 @@
 // Synergia Event Booking API
 
 import express from "express";
+import connectDB from "./config/db.js";
+import Booking from "./models/booking.js";
 
 const app = express();
 const PORT = 3000;
 
+// Connect to MongoDB
+connectDB();
+
 // Middleware to parse JSON
 app.use(express.json());
 
-// In-memory storage for bookings
-let bookings = [];
-let nextId = 1;
-
 // GET /api/bookings - Get all event bookings
-app.get("/api/bookings", (req, res) => {
-    res.status(200).json({
-        success: true,
-        count: bookings.length,
-        data: bookings
-    });
+app.get("/api/bookings", async (req, res) => {
+    try {
+        const bookings = await Booking.find();
+        res.status(200).json({
+            success: true,
+            count: bookings.length,
+            data: bookings
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Server Error",
+            error: error.message
+        });
+    }
 });
 
 // POST /api/bookings - Create a new booking
-app.post("/api/bookings", (req, res) => {
-    const { name, email, phone, eventName } = req.body;
+app.post("/api/bookings", async (req, res) => {
+    try {
+        const { name, email, event, ticketType } = req.body;
 
-    // Validate required fields
-    if (!name || !email || !phone) {
-        return res.status(400).json({
+        // Validate required fields
+        if (!name || !email || !event) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide name, email, and event"
+            });
+        }
+
+        // Create new booking
+        const newBooking = await Booking.create({
+            name,
+            email,
+            event,
+            ticketType
+        });
+
+        res.status(201).json({
+            success: true,
+            message: "Booking created successfully",
+            data: newBooking
+        });
+    } catch (error) {
+        res.status(500).json({
             success: false,
-            message: "Please provide name, email, and phone"
+            message: "Server Error",
+            error: error.message
         });
     }
-
-    // Create new booking
-    const newBooking = {
-        id: nextId++,
-        name,
-        email,
-        phone,
-        eventName: eventName || "Synergia 2025",
-        bookingDate: new Date().toISOString(),
-        status: "confirmed"
-    };
-
-    bookings.push(newBooking);
-
-    res.status(201).json({
-        success: true,
-        message: "Booking created successfully",
-        data: newBooking
-    });
 });
 
 // GET /api/bookings/:id - Get booking by ID
-app.get("/api/bookings/:id", (req, res) => {
-    const id = parseInt(req.params.id);
-    const booking = bookings.find(b => b.id === id);
+app.get("/api/bookings/:id", async (req, res) => {
+    try {
+        const booking = await Booking.findById(req.params.id);
 
-    if (!booking) {
-        return res.status(404).json({
+        if (!booking) {
+            return res.status(404).json({
+                success: false,
+                message: `Booking with ID ${req.params.id} not found`
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: booking
+        });
+    } catch (error) {
+        res.status(500).json({
             success: false,
-            message: `Booking with ID ${id} not found`
+            message: "Server Error",
+            error: error.message
         });
     }
-
-    res.status(200).json({
-        success: true,
-        data: booking
-    });
 });
 
 // PUT /api/bookings/:id - Update participant details
-app.put("/api/bookings/:id", (req, res) => {
-    const id = parseInt(req.params.id);
-    const bookingIndex = bookings.findIndex(b => b.id === id);
+app.put("/api/bookings/:id", async (req, res) => {
+    try {
+        const { name, email, event, ticketType } = req.body;
 
-    if (bookingIndex === -1) {
-        return res.status(404).json({
+        const booking = await Booking.findById(req.params.id);
+
+        if (!booking) {
+            return res.status(404).json({
+                success: false,
+                message: `Booking with ID ${req.params.id} not found`
+            });
+        }
+
+        // Update only provided fields
+        if (name) booking.name = name;
+        if (email) booking.email = email;
+        if (event) booking.event = event;
+        if (ticketType) booking.ticketType = ticketType;
+
+        await booking.save();
+
+        res.status(200).json({
+            success: true,
+            message: "Booking updated successfully",
+            data: booking
+        });
+    } catch (error) {
+        res.status(500).json({
             success: false,
-            message: `Booking with ID ${id} not found`
+            message: "Server Error",
+            error: error.message
         });
     }
-
-    const { name, email, phone, eventName, status } = req.body;
-
-    // Update only provided fields
-    if (name) bookings[bookingIndex].name = name;
-    if (email) bookings[bookingIndex].email = email;
-    if (phone) bookings[bookingIndex].phone = phone;
-    if (eventName) bookings[bookingIndex].eventName = eventName;
-    if (status) bookings[bookingIndex].status = status;
-
-    bookings[bookingIndex].updatedAt = new Date().toISOString();
-
-    res.status(200).json({
-        success: true,
-        message: "Booking updated successfully",
-        data: bookings[bookingIndex]
-    });
 });
 
 // DELETE /api/bookings/:id - Cancel a booking
-app.delete("/api/bookings/:id", (req, res) => {
-    const id = parseInt(req.params.id);
-    const bookingIndex = bookings.findIndex(b => b.id === id);
+app.delete("/api/bookings/:id", async (req, res) => {
+    try {
+        const booking = await Booking.findById(req.params.id);
 
-    if (bookingIndex === -1) {
-        return res.status(404).json({
+        if (!booking) {
+            return res.status(404).json({
+                success: false,
+                message: `Booking with ID ${req.params.id} not found`
+            });
+        }
+
+        await Booking.findByIdAndDelete(req.params.id);
+
+        res.status(200).json({
+            success: true,
+            message: "Booking cancelled successfully",
+            data: booking
+        });
+    } catch (error) {
+        res.status(500).json({
             success: false,
-            message: `Booking with ID ${id} not found`
+            message: "Server Error",
+            error: error.message
         });
     }
+});
 
-    const deletedBooking = bookings.splice(bookingIndex, 1)[0];
+// GET /api/bookings/search?email=xyz - Search booking by email
+app.get("/api/bookings/search", async (req, res) => {
+    try {
+        const { email } = req.query;
 
-    res.status(200).json({
-        success: true,
-        message: "Booking cancelled successfully",
-        data: deletedBooking
-    });
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide email query parameter"
+            });
+        }
+
+        const bookings = await Booking.find({ 
+            email: { $regex: email, $options: 'i' } 
+        });
+
+        res.status(200).json({
+            success: true,
+            count: bookings.length,
+            data: bookings
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Server Error",
+            error: error.message
+        });
+    }
+});
+
+// GET /api/bookings/filter?event=Synergia - Filter bookings by event
+app.get("/api/bookings/filter", async (req, res) => {
+    try {
+        const { event } = req.query;
+
+        if (!event) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide event query parameter"
+            });
+        }
+
+        const bookings = await Booking.find({ 
+            event: { $regex: event, $options: 'i' } 
+        });
+
+        res.status(200).json({
+            success: true,
+            count: bookings.length,
+            data: bookings
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Server Error",
+            error: error.message
+        });
+    }
 });
 
 // Start server
