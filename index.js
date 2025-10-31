@@ -13,6 +13,10 @@ connectDB();
 // Middleware to parse JSON
 app.use(express.json());
 
+app.get("/",(req,res)=>{
+    res.send("Welcome to Synergia Event Booking API");
+});
+
 // GET /api/bookings - Get all event bookings
 app.get("/api/bookings", async (req, res) => {
     try {
