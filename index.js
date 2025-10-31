@@ -10,6 +10,20 @@ const PORT = 3000;
 // Connect to MongoDB
 connectDB();
 
+// CORS Middleware - Allow all origins (for development/testing)
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+    
+    next();
+});
+
 // Middleware to parse JSON
 app.use(express.json());
 
@@ -38,6 +52,8 @@ app.get("/api/bookings", async (req, res) => {
 // POST /api/bookings - Create a new booking
 app.post("/api/bookings", async (req, res) => {
     try {
+        console.log("POST /api/bookings - Request body:", req.body);
+        
         const { name, email, event, ticketType } = req.body;
 
         // Validate required fields
@@ -62,6 +78,7 @@ app.post("/api/bookings", async (req, res) => {
             data: newBooking
         });
     } catch (error) {
+        console.error("Error creating booking:", error);
         res.status(500).json({
             success: false,
             message: "Server Error",
@@ -223,3 +240,6 @@ app.get("/api/bookings/filter", async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
+
+// Export for Vercel serverless function
+export default app;
