@@ -7,9 +7,6 @@ import Booking from "./models/booking.js";
 const app = express();
 const PORT = 3000;
 
-// Connect to MongoDB
-connectDB();
-
 // CORS Middleware - Allow all origins (for development/testing)
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
@@ -26,6 +23,21 @@ app.use((req, res, next) => {
 
 // Middleware to parse JSON
 app.use(express.json());
+
+// Middleware to ensure DB connection for each request (serverless-friendly)
+app.use(async (req, res, next) => {
+    try {
+        await connectDB();
+        next();
+    } catch (error) {
+        console.error("Database connection error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Database connection failed",
+            error: error.message
+        });
+    }
+});
 
 app.get("/",(req,res)=>{
     res.send("Welcome to Synergia Event Booking API");
